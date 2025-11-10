@@ -13,9 +13,11 @@ export default async (req: Request) => {
     });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  // Robust API Key check: Checks for Vercel's default or a custom name.
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), {
+    console.error("API key is not configured on the server.");
+    return new Response(JSON.stringify({ error: 'API key not configured. Please set API_KEY or GEMINI_API_KEY in your environment variables.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -30,8 +32,8 @@ export default async (req: Request) => {
     const stylesList = styles.join(', ');
 
     const prompt = `
-      You are an expert interviewer creating an interview plan.
-      Generate 5 insightful and distinct interview questions for a candidate.
+      You are an expert interviewer creating a tailored interview plan.
+      Generate exactly 5 insightful and distinct interview questions for a candidate.
       
       **Role Details:**
       - Role: ${role}
@@ -40,11 +42,11 @@ export default async (req: Request) => {
       - Preferred Question Styles: ${stylesList}
 
       **Instructions:**
-      1.  Create questions that are specific, open-ended, and directly probe the listed skills.
-      2.  Tailor the complexity and scope of the questions to the specified seniority level.
-      3.  Ensure the questions align with the preferred question styles. For example, if 'System design' is a style, one question must be a system design prompt. If 'Live coding' is a style, provide a clear coding problem.
-      4.  Do not add any introductory text, closing remarks, or formatting beyond the JSON structure.
-      5.  Provide only the questions in a JSON array format.
+      1. Create questions that are specific, open-ended, and directly probe the listed skills.
+      2. Tailor the complexity and scope of the questions to the specified seniority level.
+      3. Ensure questions align with the preferred styles. For 'System design', provide a system design prompt. For 'Live coding', provide a clear coding problem.
+      4. Do not add any introductory text, closing remarks, or formatting beyond the specified JSON structure.
+      5. Provide your response *only* as a JSON object with a single key "questions" which contains an array of the generated question strings.
     `;
 
     const response = await ai.models.generateContent({
@@ -62,28 +64,38 @@ export default async (req: Request) => {
                 description: "An interview question."
               }
             }
-          }
+          },
+          required: ["questions"]
         },
-        temperature: 0.7,
+        temperature: 0.8,
       },
     });
+    
+    const responseText = response.text;
+    if (!responseText) {
+        console.error("Gemini API returned an empty response text.");
+        throw new Error("Received an empty response from the AI model.");
+    }
 
-    const jsonString = response.text.trim();
-    const result = JSON.parse(jsonString);
+    // Log the raw response text for debugging purposes
+    // console.log("Raw Gemini Response:", responseText);
 
-    if (result && Array.isArray(result.questions)) {
-      return new Response(JSON.stringify({ questions: result.questions }), {
+    const responseData = JSON.parse(responseText);
+
+    if (responseData && Array.isArray(responseData.questions)) {
+      return new Response(JSON.stringify({ questions: responseData.questions }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    throw new Error("Invalid response format from Gemini API");
+    console.error("Parsed Gemini response did not have the expected format:", responseData);
+    throw new Error("The AI returned an unexpected data format.");
 
   } catch (error) {
-    console.error("Error in API route:", error);
+    console.error("Error in Gemini API call:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    return new Response(JSON.stringify({ error: "Failed to generate questions.", details: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Failed to generate questions from the AI model.", details: errorMessage }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
     });

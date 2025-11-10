@@ -22,6 +22,11 @@ const InfoPill: React.FC<{ children: React.ReactNode, className?: string }> = ({
     <span className={`inline-block bg-slate-800 text-slate-300 rounded-full px-3 py-1 text-sm font-medium border border-slate-700 ${className}`}>{children}</span>
 );
 
+const Label: React.FC<{ htmlFor: string, children: React.ReactNode }> = ({ htmlFor, children }) => (
+    <label htmlFor={htmlFor} className="block text-xs font-medium text-slate-400 mb-1">{children}</label>
+);
+
+
 export const Preview: React.FC<PreviewProps> = ({ lead, roleLabel, seniorityLabel, rubric, sampleQuestions, styles, onDownload, onGenerateQuestions, isGenerating, error }) => {
   return (
     <div className="sticky top-8 border border-blue-900/50 bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl p-5 space-y-5 print:border-none print:bg-white print:text-black print:shadow-none">
@@ -48,10 +53,10 @@ export const Preview: React.FC<PreviewProps> = ({ lead, roleLabel, seniorityLabe
 
       {/* Questions */}
       <div>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap gap-2 justify-between items-center">
             <h4 className="font-semibold text-white print:text-black">AI-Generated Sample Questions</h4>
              <div className="print:hidden">
-                <Button onClick={onGenerateQuestions} disabled={isGenerating} size="sm" variant="secondary">
+                <Button onClick={onGenerateQuestions} disabled={isGenerating} variant="secondary">
                     {isGenerating ? <LoadingSpinner /> : <SparklesIcon />}
                     {isGenerating ? 'Generating...' : 'Generate'}
                 </Button>
@@ -73,7 +78,7 @@ export const Preview: React.FC<PreviewProps> = ({ lead, roleLabel, seniorityLabe
       <hr className="border-slate-800 print:hidden"/>
 
       {/* CTA */}
-      <div className="space-y-3 print:hidden">
+      <div className="space-y-3 pt-2 print:hidden">
         <Button onClick={onDownload} fullWidth>
           <DownloadIcon />
           Generate & Download PDF

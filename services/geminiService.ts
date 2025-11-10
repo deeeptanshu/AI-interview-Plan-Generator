@@ -12,12 +12,12 @@ export const generateQuestions = async (
       body: JSON.stringify(params),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'An unknown error occurred');
+      throw new Error(data.error || data.details || 'An unknown server error occurred');
     }
 
-    const data = await response.json();
     return data.questions;
   } catch (error) {
     console.error("Error calling backend to generate questions:", error);
