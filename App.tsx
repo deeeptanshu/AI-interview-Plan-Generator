@@ -70,7 +70,8 @@ const App: React.FC = () => {
         });
         setSampleQuestions(questions.map(q => ({ text: q })));
     } catch (err) {
-        setError('Failed to generate questions. Please try again.');
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+        setError(errorMessage);
         console.error(err);
     } finally {
         setIsGenerating(false);

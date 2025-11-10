@@ -12,18 +12,21 @@ export const generateQuestions = async (
       body: JSON.stringify(params),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'An unknown error occurred');
+      // Use the 'error' or 'details' field from the backend's JSON response
+      const errorMessage = data.error || data.details || 'An unknown error occurred';
+      throw new Error(errorMessage);
     }
 
-    const data = await response.json();
     return data.questions;
   } catch (error) {
     console.error("Error calling backend to generate questions:", error);
     if (error instanceof Error) {
-      throw new Error(`Failed to generate questions: ${error.message}`);
+      // Re-throw the specific error message
+      throw new Error(error.message);
     }
-    throw new Error("Failed to generate questions due to an unexpected error.");
+    throw new Error("Failed to generate questions due to an unexpected network error.");
   }
 };
