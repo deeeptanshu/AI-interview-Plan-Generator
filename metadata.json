@@ -1,0 +1,5 @@
+{
+  "name": "AI Interview Plan Builder",
+  "description": "An intelligent tool that helps HR professionals and hiring managers design structured, role-specific interview plans. Leveraging the Gemini API, it generates tailored rubric weights and sample questions to attract and identify top talent.",
+  "requestFramePermissions": []
+}
