@@ -13,10 +13,9 @@ export default async (req: Request) => {
     });
   }
 
-  // FIX: The API key MUST be obtained exclusively from the environment variable `process.env.API_KEY`.
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured on the server. Please contact the site administrator.' }), {
+    return new Response(JSON.stringify({ error: 'API key not configured' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -25,23 +24,14 @@ export default async (req: Request) => {
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    const { role, seniority, skills, styles, numQuestions } = (await req.json()) as GenerateQuestionsBody;
-
-    // Basic validation
-    if (!role || !seniority || !skills || skills.length === 0) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: role, seniority, and skills.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const { role, seniority, skills, styles } = (await req.json()) as GenerateQuestionsBody;
 
     const skillsList = skills.join(', ');
     const stylesList = styles.join(', ');
-    const questionCount = numQuestions && numQuestions >= 3 && numQuestions <= 10 ? numQuestions : 5;
 
     const prompt = `
       You are an expert interviewer creating an interview plan.
-      Generate ${questionCount} insightful and distinct interview questions for a candidate.
+      Generate 5 insightful and distinct interview questions for a candidate.
       
       **Role Details:**
       - Role: ${role}
@@ -78,8 +68,8 @@ export default async (req: Request) => {
       },
     });
 
-    // FIX: Property 'json' does not exist on type 'Part'. The correct way to get the JSON response is to access the `text` property and parse it.
-    const result = JSON.parse(response.text) as { questions: string[] };
+    const jsonString = response.text.trim();
+    const result = JSON.parse(jsonString);
 
     if (result && Array.isArray(result.questions)) {
       return new Response(JSON.stringify({ questions: result.questions }), {
@@ -88,12 +78,12 @@ export default async (req: Request) => {
       });
     }
 
-    throw new Error("Invalid or empty response format from the Gemini API.");
+    throw new Error("Invalid response format from Gemini API");
 
   } catch (error) {
     console.error("Error in API route:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    return new Response(JSON.stringify({ error: "Failed to communicate with the AI model.", details: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Failed to generate questions.", details: errorMessage }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
     });

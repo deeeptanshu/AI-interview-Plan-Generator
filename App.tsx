@@ -32,7 +32,6 @@ const App: React.FC = () => {
   const [sampleQuestions, setSampleQuestions] = useState<SampleQuestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [numQuestions, setNumQuestions] = useState<number>(5);
 
   const isInitialMount = useRef(true);
   const currentRoleData = useMemo(() => ROLES[role], [role]);
@@ -66,17 +65,15 @@ const App: React.FC = () => {
             seniority,
             skills: Array.from(selectedSkills),
             styles: Array.from(styles),
-            numQuestions,
         });
         setSampleQuestions(questions.map(q => ({ text: q })));
     } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
-        setError(errorMessage);
+        setError('Failed to generate questions. Please try again.');
         console.error(err);
     } finally {
         setIsGenerating(false);
     }
-  }, [currentRoleData.label, seniority, selectedSkills, styles, numQuestions]);
+  }, [currentRoleData.label, seniority, selectedSkills, styles]);
 
 
   const initializeState = useCallback((newRole: Role) => {
@@ -115,7 +112,6 @@ const App: React.FC = () => {
     setSeniority('mid');
     setStyles(new Set(['Live coding']));
     setLead({ name: '—', email: '—', company: '—', title: '—' });
-    setNumQuestions(5);
     
     // Re-initialize for the backend role
     const roleData = ROLES['backend'];
@@ -203,8 +199,6 @@ const App: React.FC = () => {
                   onGenerateQuestions={handleGenerateQuestions}
                   isGenerating={isGenerating}
                   error={error}
-                  numQuestions={numQuestions}
-                  setNumQuestions={setNumQuestions}
                 />
               </div>
             </div>
