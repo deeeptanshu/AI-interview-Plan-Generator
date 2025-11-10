@@ -37,4 +37,5 @@ export interface GenerateQuestionsBody {
   seniority: string;
   skills: string[];
   styles: string[];
+  numQuestions: number;
 }

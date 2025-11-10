@@ -24,14 +24,15 @@ export default async (req: Request) => {
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    const { role, seniority, skills, styles } = (await req.json()) as GenerateQuestionsBody;
+    const { role, seniority, skills, styles, numQuestions } = (await req.json()) as GenerateQuestionsBody;
 
     const skillsList = skills.join(', ');
     const stylesList = styles.join(', ');
+    const questionCount = numQuestions && numQuestions >= 3 && numQuestions <= 10 ? numQuestions : 5;
 
     const prompt = `
       You are an expert interviewer creating an interview plan.
-      Generate 5 insightful and distinct interview questions for a candidate.
+      Generate ${questionCount} insightful and distinct interview questions for a candidate.
       
       **Role Details:**
       - Role: ${role}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Controls } from './components/Controls';
@@ -9,9 +9,21 @@ import { generateQuestions } from './services/geminiService';
 import { ROLES, SENIORITY_WEIGHTS } from './constants';
 import type { Role, Seniority, Round, Lead, RubricItem, SampleQuestion } from './types';
 
+// Helper to get initial state from localStorage
+const getInitialState = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.warn(`Error reading localStorage key "${key}":`, error);
+    return defaultValue;
+  }
+};
+
+
 const App: React.FC = () => {
-  const [role, setRole] = useState<Role>('backend');
-  const [seniority, setSeniority] = useState<Seniority>('mid');
+  const [role, setRole] = useState<Role>(() => getInitialState('intervue_role', 'backend'));
+  const [seniority, setSeniority] = useState<Seniority>(() => getInitialState('intervue_seniority', 'mid'));
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
   const [rounds, setRounds] = useState<Round[]>([]);
   const [styles, setStyles] = useState<Set<string>>(new Set(['Live coding']));
@@ -20,31 +32,30 @@ const App: React.FC = () => {
   const [sampleQuestions, setSampleQuestions] = useState<SampleQuestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [numQuestions, setNumQuestions] = useState<number>(5);
 
+  const isInitialMount = useRef(true);
   const currentRoleData = useMemo(() => ROLES[role], [role]);
 
-  const initializeState = useCallback((newRole: Role) => {
-    const roleData = ROLES[newRole];
-    const initialSkills = new Set(roleData.skills.slice(0, 4));
-    setSelectedSkills(initialSkills);
-    setRounds(roleData.rounds.map(r => ({ ...r })));
-    setSampleQuestions([]);
-    setError(null);
-  }, []);
+  // Save role and seniority to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('intervue_role', JSON.stringify(role));
+  }, [role]);
 
   useEffect(() => {
-    initializeState(role);
-  }, [role, initializeState]);
-
-  const handleReset = useCallback(() => {
-    setRole('backend');
-    setSeniority('mid');
-    setStyles(new Set(['Live coding']));
-    setLead({ name: '—', email: '—', company: '—', title: '—' });
-    initializeState('backend');
-  }, [initializeState]);
+    localStorage.setItem('intervue_seniority', JSON.stringify(seniority));
+  }, [seniority]);
   
+  // Save selected skills to localStorage
+  useEffect(() => {
+    localStorage.setItem('intervue_selectedSkills', JSON.stringify(Array.from(selectedSkills)));
+  }, [selectedSkills]);
+
   const handleGenerateQuestions = useCallback(async () => {
+    if (selectedSkills.size === 0) {
+        setError('Please select at least one skill to generate questions.');
+        return;
+    }
     setIsGenerating(true);
     setError(null);
     setSampleQuestions([]);
@@ -55,6 +66,7 @@ const App: React.FC = () => {
             seniority,
             skills: Array.from(selectedSkills),
             styles: Array.from(styles),
+            numQuestions,
         });
         setSampleQuestions(questions.map(q => ({ text: q })));
     } catch (err) {
@@ -63,7 +75,55 @@ const App: React.FC = () => {
     } finally {
         setIsGenerating(false);
     }
-  }, [currentRoleData.label, seniority, selectedSkills, styles]);
+  }, [currentRoleData.label, seniority, selectedSkills, styles, numQuestions]);
+
+
+  const initializeState = useCallback((newRole: Role) => {
+    const roleData = ROLES[newRole];
+    
+    // On first load, check for saved skills, otherwise use defaults
+    const savedSkills = getInitialState<string[]>('intervue_selectedSkills', []);
+    const initialSkills = new Set(savedSkills.length > 0 ? savedSkills : roleData.skills.slice(0, 4));
+
+    setSelectedSkills(initialSkills);
+    setRounds(roleData.rounds.map(r => ({ ...r })));
+    setSampleQuestions([]);
+    setError(null);
+
+    // Auto-generate questions on initial load
+    if (isInitialMount.current) {
+        isInitialMount.current = false;
+        // Wrap in a timeout to allow the UI to render first
+        setTimeout(() => handleGenerateQuestions(), 50);
+    }
+
+  }, [handleGenerateQuestions]);
+
+  useEffect(() => {
+    initializeState(role);
+  }, [role, initializeState]);
+
+  const handleReset = useCallback(() => {
+    // Clear localStorage
+    localStorage.removeItem('intervue_role');
+    localStorage.removeItem('intervue_seniority');
+    localStorage.removeItem('intervue_selectedSkills');
+    
+    // Reset state
+    setRole('backend');
+    setSeniority('mid');
+    setStyles(new Set(['Live coding']));
+    setLead({ name: '—', email: '—', company: '—', title: '—' });
+    setNumQuestions(5);
+    
+    // Re-initialize for the backend role
+    const roleData = ROLES['backend'];
+    const initialSkills = new Set(roleData.skills.slice(0, 4));
+    setSelectedSkills(initialSkills);
+    setRounds(roleData.rounds.map(r => ({ ...r })));
+    setSampleQuestions([]);
+    setError(null);
+  }, []);
 
   const totalMinutes = useMemo(() => rounds.reduce((acc, r) => acc + (r.mins || 0), 0), [rounds]);
 
@@ -142,6 +202,8 @@ const App: React.FC = () => {
                   onGenerateQuestions={handleGenerateQuestions}
                   isGenerating={isGenerating}
                   error={error}
+                  numQuestions={numQuestions}
+                  setNumQuestions={setNumQuestions}
                 />
               </div>
             </div>

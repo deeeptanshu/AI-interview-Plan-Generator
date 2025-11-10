@@ -16,13 +16,15 @@ interface PreviewProps {
   onGenerateQuestions: () => void;
   isGenerating: boolean;
   error: string | null;
+  numQuestions: number;
+  setNumQuestions: (count: number) => void;
 }
 
 const InfoPill: React.FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => (
     <span className={`inline-block bg-slate-800 text-slate-300 rounded-full px-3 py-1 text-sm font-medium border border-slate-700 ${className}`}>{children}</span>
 );
 
-export const Preview: React.FC<PreviewProps> = ({ lead, roleLabel, seniorityLabel, rubric, sampleQuestions, styles, onDownload, onGenerateQuestions, isGenerating, error }) => {
+export const Preview: React.FC<PreviewProps> = ({ lead, roleLabel, seniorityLabel, rubric, sampleQuestions, styles, onDownload, onGenerateQuestions, isGenerating, error, numQuestions, setNumQuestions }) => {
   return (
     <div className="sticky top-8 border border-blue-900/50 bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl p-5 space-y-5 print:border-none print:bg-white print:text-black print:shadow-none">
       <h3 className="text-xl font-semibold text-white print:text-black">Plan Preview</h3>
@@ -53,9 +55,22 @@ export const Preview: React.FC<PreviewProps> = ({ lead, roleLabel, seniorityLabe
              <div className="print:hidden">
                 <Button onClick={onGenerateQuestions} disabled={isGenerating} size="sm" variant="secondary">
                     {isGenerating ? <LoadingSpinner /> : <SparklesIcon />}
-                    {isGenerating ? 'Generating...' : 'Generate'}
+                    {isGenerating ? 'Generating...' : 'Regenerate'}
                 </Button>
             </div>
+        </div>
+        <div className="flex items-center gap-2 mt-3 text-sm text-slate-400 print:hidden">
+            <label htmlFor="numQuestions" className="font-medium">Number of questions:</label>
+            <input
+                type="number"
+                id="numQuestions"
+                min="3"
+                max="10"
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(Math.max(3, Math.min(10, Number(e.target.value))))}
+                className="w-16 bg-slate-800/50 border border-slate-700 text-white rounded-md px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                disabled={isGenerating}
+            />
         </div>
         <SampleQuestions questions={sampleQuestions} isLoading={isGenerating} error={error}/>
       </div>
